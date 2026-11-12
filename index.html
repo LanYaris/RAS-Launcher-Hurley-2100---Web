@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAS Launcher</title>
+<style>
+  :root { --bg: #f8f9fa; --text: #333; --panel: #fff; --border: #ccc; --accent: #0056b3; --accent-hover: #004494; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; line-height: 1.6; }
+  
+  .nav { max-width: 1200px; margin: 0 auto 20px; display: flex; gap: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; align-items: center; }
+  .nav a { text-decoration: none; color: #666; font-size: 15px; font-weight: 500; transition: color 0.2s; cursor: pointer; }
+  .nav a:hover, .nav a.active { color: var(--accent); }
+  .lang-btn { margin-left: auto; background: none; border: 1px solid var(--border); padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; color: #555; }
+  .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  #page-home .container { max-width: 1200px; margin: 0 auto; }
+  #page-home h1 { font-size: 24px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+  #page-home .menu-list { display: flex; flex-direction: column; gap: 15px; margin-top: 30px; }
+  #page-home .menu-item { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border: 1px solid var(--border); padding: 16px 20px; border-radius: 4px; text-decoration: none; color: var(--text); transition: border-color 0.2s; cursor: pointer; }
+  #page-home .menu-item:hover { border-color: var(--accent); }
+  #page-home .menu-item .title { font-size: 16px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+  #page-home .menu-item .desc { font-size: 13px; color: #777; }
+
+  .sim-container { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; flex-wrap: wrap; }
+  @media (max-width: 768px) { .sim-container { flex-direction: column; } .left-col, .right-col { width: 100% !important; } }
+  .left-col { flex: 1; min-width: 320px; }
+  .right-col { flex: 2; min-width: 320px; display: flex; flex-direction: column; gap: 15px; }
+  .sim-container h2 { margin-top: 0; font-size: 18px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .sim-container h3 { font-size: 14px; margin: 0 0 10px 0; color: #555; }
+  .sim-container .field { margin-bottom: 12px; }
+  .sim-container .field label { display: block; font-size: 12px; color: #555; margin-bottom: 4px; }
+  .sim-container .field input, .sim-container .field select { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 2px; box-sizing: border-box; font-family: inherit; background: #fff; }
+  .sim-container .row { display: flex; gap: 10px; }
+  .sim-container .row .field { flex: 1; }
+  .sim-container .run-btn { background: var(--accent); color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 2px; font-size: 14px; width: 100%; margin-top: 10px; }
+  .sim-container .run-btn:hover:not(:disabled) { background: var(--accent-hover); }
+  .sim-container .run-btn:disabled { background: #999; cursor: not-allowed; }
+  .sim-container .chart-box { background: var(--panel); border: 1px solid var(--border); border-radius: 2px; padding: 10px; display: flex; flex-direction: column; height: 400px; }
+  .sim-container .chart-title { font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
+  .sim-container canvas { flex: 1; width: 100%; height: 100%; }
+  .sim-container .table-box { background: var(--panel); border: 1px solid var(--border); border-radius: 2px; height: 300px; overflow-y: auto; }
+  .sim-container table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sim-container th, .sim-container td { border-bottom: 1px solid var(--border); padding: 6px 8px; text-align: left; white-space: nowrap; }
+  .sim-container th { background: #f0f0f0; position: sticky; top: 0; z-index: 1; }
+
+  #page-about .container { max-width: 800px; margin: 0 auto; }
+  #page-about h1 { font-size: 24px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+  #page-about h2 { font-size: 18px; font-weight: 600; margin-top: 30px; margin-bottom: 12px; }
+  #page-about p, #page-about ul { margin-bottom: 16px; color: #555; }
+  #page-about ul { padding-left: 20px; }
+  #page-about li { margin-bottom: 6px; }
+
+  .export-panel { background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 15px; margin-top: 20px; }
+  .export-panel h3 { margin-top: 0; font-size: 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .radio-group { display: flex; gap: 15px; margin-bottom: 10px; font-size: 14px; }
+  .radio-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .sub-options { margin-left: 20px; font-size: 13px; color: #555; margin-bottom: 10px; display: none; }
+  .sub-options.active { display: block; }
+  .sub-options input[type="number"] { width: 80px; padding: 4px; margin-left: 5px; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a data-page="home" onclick="switchPage('home'); return false;" data-i18n="nav_home">主页</a>
+  <a data-page="beginner" onclick="switchPage('beginner'); return false;" data-i18n="nav_beg">初级</a>
+  <a data-page="intermediate" onclick="switchPage('intermediate'); return false;" data-i18n="nav_int">中级</a>
+  <a data-page="advanced" onclick="switchPage('advanced'); return false;" data-i18n="nav_adv">高级</a>
+  <a data-page="about" onclick="switchPage('about'); return false;" data-i18n="nav_about">关于</a>
+  <button class="lang-btn" onclick="toggleLang()" id="langBtn">English</button>
+</div>
+
+<section id="page-home" style="display: none;">
+  <div class="container">
+    <h1 data-i18n="index_title">欢迎使用 RAS Launcher</h1>
+    <p data-i18n="index_desc1">这是一个基于 WebAssembly 的恒星结构与演化模拟器，用于计算并在赫罗图 (HR Diagram) 上展示恒星随时间的演化轨迹。</p>
+    <p data-i18n="index_desc2">请根据您的需求选择以下界面：</p>
+    <div class="menu-list">
+      <a class="menu-item" onclick="switchPage('beginner'); return false;">
+        <div><div class="title" data-i18n="index_beg_title">初级界面 (Beginner)</div><div class="desc" data-i18n="index_beg_desc">查看预置的恒星演化存档。</div></div><div>&rarr;</div>
+      </a>
+      <a class="menu-item" onclick="switchPage('intermediate'); return false;">
+        <div><div class="title" data-i18n="index_int_title">中级界面 (Intermediate)</div><div class="desc" data-i18n="index_int_desc">通过调整质量与金属丰度参数创建模拟。</div></div><div>&rarr;</div>
+      </a>
+      <a class="menu-item" onclick="switchPage('advanced'); return false;">
+        <div><div class="title" data-i18n="index_adv_title">高级界面 (Advanced)</div><div class="desc" data-i18n="index_adv_desc">使用包含时间步长与质量损失率在内的完整参数控制。</div></div><div>&rarr;</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 初级界面 ================= -->
+<section id="page-beginner" style="display: none;">
+  <div class="sim-container">
+    <div class="left-col">
+      <h2 data-i18n="beg_title">初级界面 (Beginner)</h2>
+      <p style="font-size: 13px; color: #666; margin-bottom: 20px;" data-i18n="beg_desc">从预设的恒星档案中选择一个，快速查看它的演化轨迹。</p>
+      <div class="field">
+        <label data-i18n="beg_select">选择恒星</label>
+        <select id="presetSelect">
+          <option value="1.0_0.02_13000" data-i18n="beg_p1">太阳 (1.0 M☉, Z=0.02)</option>
+          <option value="3.0_0.02_500" data-i18n="beg_p2">中等质量星 (3.0 M☉, Z=0.02)</option>
+          <option value="11.25_0.014_15000" data-i18n="beg_p3">大质量星 (11.25 M☉, Z=0.014)</option>
+        </select>
+      </div>
+      <button class="run-btn" id="btnRunBeg" disabled data-i18n="btn_run">加载并模拟</button>
+      <div id="statusBeg" style="font-size: 12px; margin-top: 5px; color: #666; text-align: center;" data-i18n="status_load">引擎加载中，请稍候…</div>
+      
+      <div class="export-panel">
+        <h3 data-i18n="export_title">导出演化视频</h3>
+        
+        <div style="margin-bottom: 10px; font-size: 13px;">
+          <label data-i18n="lbl_res">分辨率</label>
+          <select id="resBeg" style="padding: 4px; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="1280x720" data-i18n-opt="res_720">720p (1280x720)</option>
+            <option value="1920x1080" data-i18n-opt="res_1080">1080p (1920x1080)</option>
+            <option value="800x450" data-i18n-opt="res_480">480p (800x450)</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 10px; font-size: 13px;">
+          <label data-i18n="lbl_bitrate">视频码率</label>
+          <select id="bitrateBeg" style="padding: 4px; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="2000000" data-i18n-opt="bitrate_high">高 (2 Mbps)</option>
+            <option value="1000000" selected data-i18n-opt="bitrate_mid">中 (1 Mbps) - 推荐</option>
+            <option value="500000" data-i18n-opt="bitrate_low">低 (500 Kbps) - 极速</option>
+          </select>
+        </div>
+
+        <div class="radio-group">
+          <label><input type="radio" name="exportModeBeg" value="realtime" checked onchange="toggleExportOptions('Beg')"> <span data-i18n="export_realtime">真实时间</span></label>
+          <label><input type="radio" name="exportModeBeg" value="frames" onchange="toggleExportOptions('Beg')"> <span data-i18n="export_frames">按帧数</span></label>
+        </div>
+        <div id="optionsRealtimeBeg" class="sub-options active">
+          <label><input type="checkbox" id="skipMSBeg"> <span data-i18n="export_skip_ms">跳过主序</span></label>
+          <div style="margin-top: 5px;"><span data-i18n="export_duration">视频时长</span><input type="number" id="durationBeg" value="15" min="5" max="60"> s</div>
+        </div>
+        <div id="optionsFramesBeg" class="sub-options">
+          <span data-i18n="export_frames_count">帧数</span>
+          <input type="number" id="framesBeg" value="500" min="50" max="2000" step="50">
+        </div>
+        <button class="run-btn" id="btnExportBeg" disabled style="background: #444; margin-top: 10px;" data-i18n="btn_export">生成视频并下载</button>
+        <div id="statusExportBeg" style="font-size: 12px; margin-top: 5px; color: #666; text-align: center;"></div>
+      </div>
+    </div>
+    <div class="right-col">
+      <div class="chart-box"><div class="chart-title" data-i18n="chart_title">赫罗图 (HR Diagram)</div><canvas id="canvasBeg"></canvas></div>
+      <div class="table-box">
+        <table><thead><tr>
+          <th data-i18n="col_tev">Tev(Myr)</th><th data-i18n="col_type">type</th><th data-i18n="col_mt">Mt (M☉)</th><th data-i18n="col_mc">Mc (M☉)</th><th>L (L☉)</th><th>R (R☉)</th><th>T (K)</th>
+        </tr></thead><tbody id="bodyBeg"><tr><td colspan="8" style="text-align: center; color: #999;" data-i18n="no_data">尚无数据，点击左侧开始模拟</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 中级界面 ================= -->
+<section id="page-intermediate" style="display: none;">
+  <div class="sim-container">
+    <div class="left-col">
+      <h2 data-i18n="int_title">中级界面 (Intermediate)</h2>
+      <p style="font-size: 13px; color: #666; margin-bottom: 20px;" data-i18n="int_desc">根据质量和金属丰度创建模拟。</p>
+      <h3 data-i18n="int_params">恒星参数</h3>
+      <div class="field"><label data-i18n="lbl_mass">质量 (M☉) - 0.1 至 120</label><input type="number" id="inMassInt" value="1.0" step="0.1" min="0.1" max="120"></div>
+      <div class="field"><label data-i18n="lbl_z">金属丰度 Z - 0.0001 至 0.03</label><input type="number" id="inZInt" value="0.02" step="0.001" min="0.0001" max="0.03"></div>
+      <div class="field"><label data-i18n="lbl_time">最大演化时间 (Myr)</label><input type="number" id="inTphysfInt" value="13000"></div>
+      <button class="run-btn" id="btnRunInt" disabled data-i18n="btn_run">开始模拟</button>
+      <div id="statusInt" style="font-size: 12px; margin-top: 5px; color: #666; text-align: center;" data-i18n="status_load">引擎加载中，请稍候…</div>
+
+      <div class="export-panel">
+        <h3 data-i18n="export_title">导出演化视频</h3>
+        
+        <div style="margin-bottom: 10px; font-size: 13px;">
+          <label data-i18n="lbl_res">分辨率</label>
+          <select id="resInt" style="padding: 4px; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="1280x720" data-i18n-opt="res_720">720p (1280x720)</option>
+            <option value="1920x1080" data-i18n-opt="res_1080">1080p (1920x1080)</option>
+            <option value="800x450" data-i18n-opt="res_480">480p (800x450)</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 10px; font-size: 13px;">
+          <label data-i18n="lbl_bitrate">视频码率</label>
+          <select id="bitrateInt" style="padding: 4px; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="2000000" data-i18n-opt="bitrate_high">高 (2 Mbps)</option>
+            <option value="1000000" selected data-i18n-opt="bitrate_mid">中 (1 Mbps) - 推荐</option>
+            <option value="500000" data-i18n-opt="bitrate_low">低 (500 Kbps) - 极速</option>
+          </select>
+        </div>
+
+        <div class="radio-group">
+          <label><input type="radio" name="exportModeInt" value="realtime" checked onchange="toggleExportOptions('Int')"> <span data-i18n="export_realtime">真实时间</span></label>
+          <label><input type="radio" name="exportModeInt" value="frames" onchange="toggleExportOptions('Int')"> <span data-i18n="export_frames">按帧数</span></label>
+        </div>
+        <div id="optionsRealtimeInt" class="sub-options active">
+          <label><input type="checkbox" id="skipMSInt"> <span data-i18n="export_skip_ms">跳过主序</span></label>
+          <div style="margin-top: 5px;"><span data-i18n="export_duration">视频时长</span><input type="number" id="durationInt" value="15" min="5" max="60"> s</div>
+        </div>
+        <div id="optionsFramesInt" class="sub-options">
+          <span data-i18n="export_frames_count">帧数</span>
+          <input type="number" id="framesInt" value="500" min="50" max="2000" step="50">
+        </div>
+        <button class="run-btn" id="btnExportInt" disabled style="background: #444; margin-top: 10px;" data-i18n="btn_export">生成视频并下载</button>
+        <div id="statusExportInt" style="font-size: 12px; margin-top: 5px; color: #666; text-align: center;"></div>
+      </div>
+    </div>
+    <div class="right-col">
+      <div class="chart-box"><div class="chart-title" data-i18n="chart_title">赫罗图 (HR Diagram)</div><canvas id="canvasInt"></canvas></div>
+      <div class="table-box">
+        <table><thead><tr>
+          <th data-i18n="col_tev">Tev(Myr)</th><th data-i18n="col_type">type</th><th data-i18n="col_mt">Mt (M☉)</th><th data-i18n="col_mc">Mc (M☉)</th><th>L (L☉)</th><th>R (R☉)</th><th>T (K)</th>
+        </tr></thead><tbody id="bodyInt"><tr><td colspan="8" style="text-align: center; color: #999;" data-i18n="no_data">尚无数据，点击左侧开始模拟</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 高级界面 ================= -->
+<section id="page-advanced" style="display: none;">
+  <div class="sim-container">
+    <div class="left-col">
+      <h2 data-i18n="adv_title">高级界面 (Advanced)</h2>
+      <p style="font-size: 13px; color: #666; margin-bottom: 20px;" data-i18n="adv_desc">使用包含时间步长与质量损失率在内的完整参数控制。</p>
+      <h3 data-i18n="adv_mass_title">恒星参数</h3>
+      <div class="field"><label data-i18n="lbl_mass">质量 (M☉) - 0.1 至 120</label><input type="number" id="inMassAdv" value="1.00" step="0.1" min="0.1" max="120"></div>
+      <div class="field"><label data-i18n="lbl_z">金属丰度 Z - 0.0001 至 0.03</label><input type="number" id="inZAdv" value="0.02" step="0.001" min="0.0001" max="0.03"></div>
+      <div class="field"><label data-i18n="lbl_time">最大演化时间 (Myr)</label><input type="number" id="inTphysfAdv" value="15000"></div>
+      <h3 data-i18n="adv_adv_title">高级参数</h3>
+      <div class="row">
+        <div class="field"><label data-i18n="lbl_pts1">pts1 (MS)</label><input type="number" id="inPts1" value="0.05" step="0.01"></div>
+        <div class="field"><label data-i18n="lbl_pts2">pts2 (GB)</label><input type="number" id="inPts2" value="0.01" step="0.01"></div>
+        <div class="field"><label data-i18n="lbl_pts3">pts3 (HG)</label><input type="number" id="inPts3" value="0.02" step="0.01"></div>
+      </div>
+      <div class="field"><label data-i18n="lbl_neta">Reimers 质量损失系数 (neta)</label><input type="number" id="inNeta" value="0.5" step="0.1"></div>
+      <div class="field" style="display: flex; align-items: center; margin-top: 15px;">
+        <input type="checkbox" id="useHurley2100" style="width: auto; margin-right: 8px;">
+        <label for="useHurley2100" style="margin-bottom: 0; cursor: pointer;">启用 Hurley 2100 精细演化阶段</label>
+      </div>
+      <button class="run-btn" id="btnRunAdv" disabled data-i18n="btn_run">开始模拟</button>
+      <div id="statusAdv" style="font-size: 12px; margin-top: 12px; color: #666; text-align: center;" data-i18n="status_load">引擎加载中，请稍候…</div>
+
+      <div class="export-panel">
+        <h3 data-i18n="export_title">导出演化视频</h3>
+        
+        <div style="margin-bottom: 10px; font-size: 13px;">
+          <label data-i18n="lbl_res">分辨率</label>
+          <select id="resAdv" style="padding: 4px; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="1280x720" data-i18n-opt="res_720">720p (1280x720)</option>
+            <option value="1920x1080" data-i18n-opt="res_1080">1080p (1920x1080)</option>
+            <option value="800x450" data-i18n-opt="res_480">480p (800x450)</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 10px; font-size: 13px;">
+          <label data-i18n="lbl_bitrate">视频码率</label>
+          <select id="bitrateAdv" style="padding: 4px; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="2000000" data-i18n-opt="bitrate_high">高 (2 Mbps)</option>
+            <option value="1000000" selected data-i18n-opt="bitrate_mid">中 (1 Mbps) - 推荐</option>
+            <option value="500000" data-i18n-opt="bitrate_low">低 (500 Kbps) - 极速</option>
+          </select>
+        </div>
+
+        <div class="radio-group">
+          <label><input type="radio" name="exportModeAdv" value="realtime" checked onchange="toggleExportOptions('Adv')"> <span data-i18n="export_realtime">真实时间</span></label>
+          <label><input type="radio" name="exportModeAdv" value="frames" onchange="toggleExportOptions('Adv')"> <span data-i18n="export_frames">按帧数</span></label>
+        </div>
+        <div id="optionsRealtimeAdv" class="sub-options active">
+          <label><input type="checkbox" id="skipMSAdv"> <span data-i18n="export_skip_ms">跳过主序</span></label>
+          <div style="margin-top: 5px;"><span data-i18n="export_duration">视频时长</span><input type="number" id="durationAdv" value="15" min="5" max="60"> s</div>
+        </div>
+        <div id="optionsFramesAdv" class="sub-options">
+          <span data-i18n="export_frames_count">帧数</span>
+          <input type="number" id="framesAdv" value="500" min="50" max="2000" step="50">
+        </div>
+        <button class="run-btn" id="btnExportAdv" disabled style="background: #444; margin-top: 10px;" data-i18n="btn_export">生成视频并下载</button>
+        <div id="statusExportAdv" style="font-size: 12px; margin-top: 5px; color: #666; text-align: center;"></div>
+      </div>
+    </div>
+    <div class="right-col">
+      <div class="chart-box"><div class="chart-title" data-i18n="chart_title">赫罗图 (HR Diagram)</div><canvas id="canvasAdv"></canvas></div>
+      <div class="table-box">
+        <table><thead><tr>
+          <th data-i18n="col_tev">Tev(Myr)</th><th data-i18n="col_type">type</th><th data-i18n="col_mt">Mt (M☉)</th><th data-i18n="col_mc">Mc (M☉)</th><th>L (L☉)</th><th>R (R☉)</th><th>T (K)</th>
+        </tr></thead><tbody id="bodyAdv"><tr><td colspan="8" style="text-align: center; color: #999;" data-i18n="no_data">尚无数据，点击左侧开始模拟</td></tr></tbody></table>
+      </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="page-about" style="display: none;">
+  <div class="container">
+    <h1 data-i18n="ab_title">关于 RAS Launcher</h1>
+    <p data-i18n="ab_desc"><strong>RAS Launcher</strong> 是 <strong>SphereStudio</strong> 开发的一款图形化恒星演化模拟器。它的核心基于经典的 SSE (Stellar Structure and Evolution) 解析公式库。</p>
+    <h2 data-i18n="ab_tech">核心技术</h2>
+    <ul>
+      <li data-i18n="ab_t1">前端 UI：纯 HTML + CSS + JavaScript</li>
+      <li data-i18n="ab_t2">计算引擎：SSE Fortran 77 源码编译至 WebAssembly (WASM)</li>
+      <li data-i18n="ab_t3">工具链：f2c + Clang (Emscripten)</li>
+      <li data-i18n="ab_t4">运行环境：完全在浏览器内运行，无需任何后端服务器</li>
+    </ul>
+    <h2 data-i18n="ab_back">背景与致谢</h2>
+    <p data-i18n="ab_b1">SSE 模型由 Jarrod Hurley、Onno Pols 和 Christopher Tout 在 2000 年开发。相关论文发表于 MNRAS (2000, 315, 543)。</p>
+    <p data-i18n="ab_b2">界面设计参考了伊利诺伊大学 Digital Demo Room 的视觉风格与参数设定。</p>
+    <h2 data-i18n="ab_ver">版本信息</h2>
+    <ul>
+      <li data-i18n="ab_v1">版本：2.1.0</li>
+      <li data-i18n="ab_v2">更新：基于 WebAssembly 的纯静态重构版</li>
+      <li data-i18n="ab_v3">开源协议：MIT License (引擎部分)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 引入 mp4-muxer 库 (用于生成 MP4) -->
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.js"></script>
+
+<script type="module">
+import { createCompiler } from './fortran-wasm-bundle.js';
+
+// ==========================================
+// 1. 国际化翻译字典
+// ==========================================
+const translations = {
+  zh: {
+    nav_home: "主页", nav_beg: "初级", nav_int: "中级", nav_adv: "高级", nav_about: "关于",
+    index_title: "欢迎使用 RAS Launcher", index_desc1: "这是一个基于 WebAssembly 的恒星结构与演化模拟器，用于计算并在赫罗图 (HR Diagram) 上展示恒星随时间的演化轨迹。", index_desc2: "请根据您的需求选择以下界面：", 
+    index_beg_title: "初级界面 (Beginner)", index_beg_desc: "查看预置的恒星演化存档。", 
+    index_int_title: "中级界面 (Intermediate)", index_int_desc: "通过调整质量与金属丰度参数创建模拟。", 
+    index_adv_title: "高级界面 (Advanced)", index_adv_desc: "使用包含时间步长与质量损失率在内的完整参数控制。",
+    
+    beg_title: "初级界面 (Beginner)", beg_desc: "从预设的恒星档案中选择一个，快速查看它的演化轨迹。", beg_select: "选择恒星", 
+    beg_p1: "太阳 (1.0 M☉, Z=0.02)", beg_p2: "中等质量星 (3.0 M☉, Z=0.02)", beg_p3: "大质量星 (11.25 M☉, Z=0.014)", 
+    
+    btn_run: "开始模拟", btn_export: "生成视频并下载",
+    status_load: "引擎加载中，请稍候…", status_ready: "就绪。", status_running: "正在运行…", status_success: "模拟成功！", status_error: "报错: ", 
+    chart_title: "赫罗图 (HR Diagram)", col_tev: "Tev(Myr)", col_type: "type", col_mt: "Mt", col_logl: "logL", col_logr: "logR", col_logt: "logT", col_spec: "光谱", no_data: "尚无数据，点击左侧开始模拟",
+
+    lbl_res: "分辨率", lbl_bitrate: "视频码率",
+    res_720: "720p (1280x720)", res_1080: "1080p (1920x1080)", res_480: "480p (800x450)",
+    bitrate_high: "高 (2 Mbps)", bitrate_mid: "中 (1 Mbps) - 推荐", bitrate_low: "低 (500 Kbps) - 极速",
+    status_encoding: "编码中...",
+    status_downloaded: "视频已下载！",
+    status_encoding_progress: "编码中... {p}%",
+    
+    int_title: "中级界面 (Intermediate)", int_desc: "根据质量和金属丰度创建模拟。", int_params: "恒星参数", 
+    adv_title: "高级界面 (Advanced)", adv_desc: "使用包含时间步长与质量损失率在内的完整参数控制。", adv_mass_title: "恒星参数", adv_adv_title: "高级参数", 
+    lbl_mass: "质量 (M☉) - 0.1 至 120", lbl_z: "金属丰度 Z - 0.0001 至 0.03", lbl_time: "最大演化时间 (Myr)", 
+    lbl_pts1: "pts1 (MS)", lbl_pts2: "pts2 (GB)", lbl_pts3: "pts3 (HG)", lbl_neta: "Reimers 系数 (neta)",
+    
+    ab_title: "关于 RAS Launcher", ab_desc: "<strong>RAS Launcher</strong> 是 <strong>SphereStudio</strong> 开发的一款图形化恒星演化模拟器。它的核心基于经典的 SSE (Stellar Structure and Evolution) 解析公式库。", 
+    ab_tech: "核心技术", ab_t1: "前端 UI：纯 HTML + CSS + JavaScript", ab_t2: "计算引擎：SSE Fortran 77 源码编译至 WebAssembly (WASM)", ab_t3: "工具链：f2c + Clang (Emscripten)", ab_t4: "运行环境：完全在浏览器内运行，无需任何后端服务器", 
+    ab_back: "背景与致谢", ab_b1: "SSE 模型由 Jarrod Hurley、Onno Pols 和 Christopher Tout 在 2000 年开发。相关论文发表于 MNRAS (2000, 315, 543)。", ab_b2: "界面设计参考了伊利诺伊大学 Digital Demo Room 的视觉风格与参数设定。", 
+    ab_ver: "版本信息", ab_v1: "版本：2.1.0", ab_v2: "更新：基于 WebAssembly 的纯静态重构版", ab_v3: "开源协议：MIT License (引擎部分)",
+    
+    export_title: "导出演化视频", export_realtime: "真实时间", export_frames: "按帧数", export_skip_ms: "跳过主序", export_duration: "视频时长", export_frames_count: "帧数",
+    lbl_res: "分辨率", lbl_bitrate: "视频码率"
+  },
+  en: {
+    nav_home: "Home", nav_beg: "Beginner", nav_int: "Intermediate", nav_adv: "Advanced", nav_about: "About",
+    index_title: "Welcome to RAS Launcher", 
+    index_desc1: "This is a WebAssembly-based stellar structure and evolution simulator, used to calculate and display stellar evolution tracks on a Hertzsprung-Russell (HR) diagram over time.", 
+    index_desc2: "Please select an interface based on your needs:", 
+    index_beg_title: "Beginner Interface", index_beg_desc: "View pre-generated stellar evolution archives.", 
+    index_int_title: "Intermediate Interface", index_int_desc: "Create simulations by adjusting mass and metallicity.", 
+    index_adv_title: "Advanced Interface", index_adv_desc: "Use full parameter controls including time steps and mass loss rates.",
+    
+    beg_title: "Beginner Interface", beg_desc: "Select a pre-defined stellar archive to quickly view its evolution track.", beg_select: "Select Star", 
+    beg_p1: "Sun (1.0 M☉, Z=0.02)", beg_p2: "Intermediate Mass (3.0 M☉, Z=0.02)", beg_p3: "High Mass (11.25 M☉, Z=0.014)", 
+    
+    btn_run: "Run Simulation", btn_export: "Generate & Download Video",
+    status_load: "Loading WASM engine, please wait…", status_ready: "Ready.", status_running: "Running…", status_success: "Simulation successful!", status_error: "Error: ", 
+    chart_title: "HR Diagram", col_tev: "Tev(Myr)", col_type: "Type", col_mt: "Mt", col_logl: "logL", col_logr: "logR", col_logt: "logT", col_spec: "Spec", no_data: "No data. Click Run to start.",
+    
+    lbl_res: "Resolution", lbl_bitrate: "Video Bitrate",
+    res_720: "720p (1280x720)", res_1080: "1080p (1920x1080)", res_480: "480p (800x450)",
+    bitrate_high: "High (2 Mbps)", bitrate_mid: "Mid (1 Mbps) - Recommended", bitrate_low: "Low (500 Kbps) - Fast",
+    status_encoding: "Encoding...",
+    status_downloaded: "Video downloaded!",
+    status_encoding_progress: "Encoding... {p}%",
+
+    int_title: "Intermediate Interface", int_desc: "Create simulations by adjusting mass and metallicity.", int_params: "Stellar Parameters", 
+    adv_title: "Advanced Interface", adv_desc: "Use full parameter controls including time steps and mass loss rates.", adv_mass_title: "Stellar Parameters", adv_adv_title: "Advanced Parameters", 
+    lbl_mass: "Mass (M☉) - 0.1 to 120", lbl_z: "Metallicity Z - 0.0001 to 0.03", lbl_time: "Ending Time (Myr)", 
+    lbl_pts1: "pts1 (MS)", lbl_pts2: "pts2 (GB)", lbl_pts3: "pts3 (HG)", lbl_neta: "Reimers (neta)",
+    
+    ab_title: "About RAS Launcher", 
+    ab_desc: "<strong>RAS Launcher</strong> is a graphical stellar evolution simulator developed by <strong>SphereStudio</strong>. It is powered by the classic SSE (Stellar Structure and Evolution) analytical formula library.", 
+    ab_tech: "Core Technology", ab_t1: "Frontend UI: Pure HTML + CSS + JavaScript", ab_t2: "Compute Engine: SSE Fortran 77 compiled to WebAssembly (WASM)", ab_t3: "Toolchain: f2c + Clang (Emscripten)", ab_t4: "Runtime: Fully runs in the browser, no backend server required", 
+    ab_back: "Background & Credits", ab_b1: "The SSE model was developed by Jarrod Hurley, Onno Pols, and Christopher Tout in 2000. Published in MNRAS (2000, 315, 543).", ab_b2: "UI design is inspired by the Digital Demo Room at the University of Illinois.", 
+    ab_ver: "Version Info", ab_v1: "Version: 2.1.0", ab_v2: "Update: Pure static WebAssembly refactor", ab_v3: "License: MIT License (Engine portion)",
+    
+    export_title: "Export Evolution Video", export_realtime: "Real Time", export_frames: "By Frames", export_skip_ms: "Skip Main Sequence", export_duration: "Duration", export_frames_count: "Frames",
+    lbl_res: "Resolution", lbl_bitrate: "Video Bitrate"
+  }
+};
+
+let currentLang = localStorage.getItem('rasl_lang') || 'zh';
+
+window.applyLang = function() {
+  document.documentElement.lang = currentLang;
+  
+  // 遍历普通标签
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (translations[currentLang][key]) {
+      if (el.tagName === 'P' && el.innerHTML.includes('<strong>')) {
+        el.innerHTML = translations[currentLang][key];
+      } else {
+        el.textContent = translations[currentLang][key];
+      }
+    }
+  });
+
+  // 专门遍历下拉框选项 (处理浏览器兼容问题)
+  document.querySelectorAll('[data-i18n-opt]').forEach(el => {
+    const key = el.getAttribute('data-i18n-opt');
+    if (translations[currentLang][key]) {
+      el.text = translations[currentLang][key];
+    }
+  });
+  
+  document.getElementById('langBtn').textContent = currentLang === 'zh' ? 'English' : '中文';
+  
+  ['bodyBeg', 'bodyInt', 'bodyAdv'].forEach(id => {
+    const tbody = document.getElementById(id);
+    if (tbody && tbody.innerHTML.includes('colspan="7"')) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${translations[currentLang].no_data}</td></tr>`;
+    }
+  });
+  
+  if (typeof updateStatuses === 'function') {
+    updateStatuses();
+  }
+};
+
+window.toggleLang = function() {
+  currentLang = currentLang === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('rasl_lang', currentLang);
+  window.applyLang();
+};
+
+window.switchPage = function(pageName) {
+  document.querySelectorAll('section[id^="page-"]').forEach(el => el.style.display = 'none');
+  const target = document.getElementById('page-' + pageName);
+  if (target) target.style.display = 'block';
+  
+  document.querySelectorAll('.nav a').forEach(el => {
+    el.classList.remove('active');
+    if (el.getAttribute('data-page') === pageName) el.classList.add('active');
+  });
+  history.pushState({ page: pageName }, '', '#' + pageName);
+
+  if (pageName === 'beginner' && lastData.beg.length) drawHR('canvasBeg', lastData.beg);
+  if (pageName === 'intermediate' && lastData.int.length) drawHR('canvasInt', lastData.int);
+  if (pageName === 'advanced' && lastData.adv.length) drawHR('canvasAdv', lastData.adv);
+};
+
+window.addEventListener('popstate', (event) => {
+  window.switchPage(event.state?.page || 'home');
+});
+
+window.toggleExportOptions = function(key) {
+  const mode = document.querySelector(`input[name="exportMode${key}"]:checked`).value;
+  const realtimeDiv = document.getElementById(`optionsRealtime${key}`);
+  const framesDiv = document.getElementById(`optionsFrames${key}`);
+  if (realtimeDiv) realtimeDiv.classList.toggle('active', mode === 'realtime');
+  if (framesDiv) framesDiv.classList.toggle('active', mode === 'frames');
+};
+
+// ==========================================
+// 2. WASM 引擎与状态管理
+// ==========================================
+let compiler = null;
+let compiled = null;
+let compiledFull = null;
+let isReady = false;
+
+function updateStatuses() {
+  for (const key of ['Beg', 'Int', 'Adv']) {
+    const el = document.getElementById('status' + key);
+    if (el) {
+      if (isReady) {
+        el.textContent = translations[currentLang].status_ready;
+        el.style.color = '#666';
+      } else {
+        el.textContent = translations[currentLang].status_load;
+      }
+    }
+  }
+}
+
+async function initWasm() {
+  try {
+    // 1. 初始化编译器
+    compiler = await createCompiler({ 
+      baseUrl: new URL('./fortran/', location.href).href, 
+      clangBaseUrl: new URL('./clang/', location.href).href, 
+      onProgress: (v) => { /* 进度条代码 */ } 
+    });
+    
+// 2. 编译 2000 版
+const srcRes = await fetch('./H2000.f');
+if (!srcRes.ok) throw new Error(`H2000.f fetch failed: ${srcRes.status}`);
+const src = await srcRes.text();
+console.log("H2000 fetch status:", srcRes.status, srcRes.headers.get("content-type"));
+console.log("H2000 source length:", src.length);
+console.log("H2000 first 5 lines:\n" + src.split("\n").slice(0, 5).join("\n"));
+compiled = await compiler.compile(src, { fileName: "H2000.f" });
+
+// 3. 后台编译 2100 版
+try {
+  const srcFullRes = await fetch('./H2100.f');
+  if (!srcFullRes.ok) throw new Error(`H2100.f fetch failed: ${srcFullRes.status}`);
+  const srcFull = await srcFullRes.text();
+  console.log("H2100 fetch status:", srcFullRes.status, srcFullRes.headers.get("content-type"));
+  console.log("H2100 source length:", srcFull.length);
+  console.log("H2100 first 5 lines:\n" + srcFull.split("\n").slice(0, 5).join("\n"));
+  compiledFull = await compiler.compile(srcFull, { fileName: "H2100.f" });
+  console.log("Hurley 2100 引擎编译完成！");
+} catch (e) {
+  console.warn("Hurley 2100 编译失败，请检查代码：", e);
+}
+    
+    isReady = true;
+    // 解锁所有运行按钮
+    ['btnRunBeg', 'btnRunInt', 'btnRunAdv'].forEach(id => document.getElementById(id).disabled = false);
+    updateStatuses();
+  } catch (e) {
+    // 处理错误
+  }
+}
+
+// ==========================================
+// 3. 数据解析与常规 UI 绘图
+// ==========================================
+const lastData = { beg: [], int: [], adv: [] };
+
+const SPECTRAL_BOUNDS = [[33000,"O"],[10000,"B"],[7500,"A"],[6000,"F"],[5200,"G"],[3700,"K"],[2400,"M"],[1300,"L"],[700,"T"],[0,"Y"]];
+const SPECTRAL_SUB = { O:[50000,45000,40000,37000,35000,33000,31000,29000,27000,25000], B:[30000,25000,20000,17000,15000,13000,11500,10500,10000,9500], A:[9500,9000,8500,8200,7800,7500,7300,7100,6900,6700], F:[6700,6500,6300,6100,5900,5700,5500,5300,5100,4900], G:[5600,5500,5400,5300,5200,5100,5000,4900,4800,4700], K:[4900,4700,4500,4300,4100,3900,3700,3500,3300,3100], M:[3600,3400,3200,3000,2800,2600,2400,2200,2000,1800], L:[1800,1600,1400,1200,1000,900,800,700,600,500], T:[500,450,400,350,300,250,200,150,100,50], Y:[50,40,30,20,10,5,2,1,0,0] };
+
+function tempToSpectral(T, type) { 
+  if (type===7 && T>=30000) return "WR"; 
+  if (type>=10) return "-"; 
+  let main="Y"; 
+  for(const [tmin,s] of SPECTRAL_BOUNDS) { if(T>=tmin){main=s;break;} } 
+  const bounds = SPECTRAL_SUB[main]||[]; 
+  let sub="0"; 
+  for(let i=0;i<bounds.length;i++) { if(T>=bounds[i]){sub=String(i);break;} } 
+  return main+sub; 
+}
+
+function parseData(typeKey, text) {
+  console.log("RAW STDOUT tail:\n" + text.split("\n").slice(-20).join("\n"));
+  const rows = [];
+  // 只有高级界面才允许开启该功能
+  const isHurley2100 = (typeKey === 'adv') && document.getElementById('useHurley2100')?.checked;
+
+  for (const line of text.split(/\r?\n/)) {
+    const parts = line.trim().split(/\s+/);
+    // 强制要求至少有 11 列，并且第一列是有效的数字
+    if (parts.length < 11 || isNaN(parseFloat(parts[0]))) continue;
+    
+    const tev = parseFloat(parts[0]);
+    if (tev < 0) continue; 
+    
+    const logL = parseFloat(parts[4]);
+    const logR = parseFloat(parts[5]);
+    const logT = parseFloat(parts[6]);
+    
+    // 核心修复：如果 L 和 R 解析出来是 NaN（比如 Fortran 输出了星号或乱码），直接跳过这一行
+    if (isNaN(logL) || isNaN(logR) || isNaN(logT)) continue;
+    
+    let rawType = parseInt(parts[1], 10);
+    let displayType = rawType;
+    let typeName = getStageName(rawType, isHurley2100);
+    const coreMass = parseFloat(parts[2]) || 0; 
+    const totalMass = parseFloat(parts[3]) || 0; 
+    
+    const L = Math.pow(10, logL);
+    const R = Math.pow(10, logR);
+    const T = Math.pow(10, logT);
+
+    rows.push({ 
+      Tev: tev, 
+      type: displayType, 
+      typeName: typeName,
+      rawType: rawType,
+      coreMass: coreMass, 
+      totalMass: totalMass, 
+      L: L,
+      R: R,
+      T: T,
+      logL: logL, 
+      logR: logR, 
+      logT: logT
+    });
+  }
+  lastData[typeKey] = rows;
+  renderTable(typeKey, rows);
+  renderTableTR(typeKey, rows);
+  drawHR('canvas' + typeKey.charAt(0).toUpperCase() + typeKey.slice(1), rows);
+  document.getElementById('btnExport' + typeKey.charAt(0).toUpperCase() + typeKey.slice(1)).disabled = false;
+}
+
+function renderTable(typeKey, rows) {
+  const tbody = document.getElementById('body' + typeKey.charAt(0).toUpperCase() + typeKey.slice(1));
+  let html = '';
+  for (let r of rows) {
+    const Lv = Number(r.L);
+    const Rv = Number(r.R);
+    const Tv = Number(r.T);
+    
+    const Lstr = !Number.isFinite(Lv) ? "-"
+               : Lv >= 1e3 ? Lv.toExponential(3)
+               : Lv >= 1    ? Lv.toFixed(3)
+               :              Lv.toExponential(3);
+    const Rstr = !Number.isFinite(Rv) ? "-"
+               : Rv >= 1e3 ? Rv.toExponential(3)
+               : Rv >= 1    ? Rv.toFixed(3)
+               :              Rv.toExponential(3);
+    const Tstr = Number.isFinite(Tv) ? Tv.toFixed(0) : "-";
+    
+    const displayName = r.typeName || "Unknown";
+
+    // 🔥 修改点：把 type 和 stage 拼在一起展示
+    html += `<tr>
+      <td>${r.Tev.toFixed(3)}</td>
+      <td>${r.type} (${displayName})</td>
+      <td>${r.totalMass.toFixed(4)}</td>
+      <td>${r.coreMass.toFixed(4)}</td>
+      <td>${Lstr}</td>
+      <td>${Rstr}</td>
+      <td>${Tstr}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html || `<tr><td colspan="7" style="text-align:center;">${translations[currentLang].no_data}</td></tr>`;
+}
+
+function renderTableTR(typeKey, rows) {
+  const id = 'bodyTR' + typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
+  const tbody = document.getElementById(id);
+  if (!tbody) return;
+  let html = '';
+  for (let r of rows) {
+    const Rv = Number(r.R);
+    const Rstr = !Number.isFinite(Rv) ? "-"
+               : Rv >= 1e3 ? Rv.toExponential(3)
+               : Rv >= 1    ? Rv.toFixed(3)
+               :              Rv.toExponential(3);
+    const logRv = Number(r.logR);
+    html += `<tr><td>${r.Tev.toFixed(3)}</td><td>${r.type}</td><td>${Rstr}</td><td>${Number.isFinite(logRv) ? logRv.toFixed(4) : "-"}</td></tr>`;
+  }
+  tbody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;">${translations[currentLang].no_data}</td></tr>`;
+}
+
+function drawHR(canvasId, rows) {
+  const chartCanvas = document.getElementById(canvasId);
+  if (!chartCanvas || chartCanvas.offsetParent === null) return; 
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = chartCanvas.parentElement.getBoundingClientRect();
+  chartCanvas.style.width = '100%';
+  chartCanvas.style.height = '100%';
+  chartCanvas.width = rect.width * dpr;
+  chartCanvas.height = (rect.height - 20) * dpr;
+  
+  const ctx = chartCanvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W = chartCanvas.width / dpr;
+  const H = chartCanvas.height / dpr;
+  ctx.clearRect(0, 0, W, H);
+  
+  const pad = {l: 40, r: 15, t: 15, b: 25};
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+  const HR = { logTmin:3.3, logTmax:4.7, logLmin:-3, logLmax:6 };
+  
+  function project(row) {
+    const tx = (HR.logTmax - row.logT) / (HR.logTmax - HR.logTmin);
+    const ty = (HR.logLmax - row.logL) / (HR.logLmax - HR.logLmin);
+    return { x: pad.l + tx * plotW, y: pad.t + ty * plotH };
+  }
+  
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  for(let lt=3.5; lt<=4.6; lt+=0.2) {
+    const x = pad.l + ((HR.logTmax - lt) / (HR.logTmax - HR.logTmin)) * plotW;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + plotH); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(lt.toFixed(1), x, H - 10);
+  }
+  for(let ll=-2; ll<=6; ll+=1) {
+    const y = pad.t + ((HR.logLmax - ll) / (HR.logLmax - HR.logLmin)) * plotH;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + plotW, y); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.textAlign = 'right';
+    ctx.fillText(ll, pad.l - 5, y + 3);
+  }
+  
+  ctx.strokeStyle = '#ccc';
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + plotH); ctx.lineTo(pad.l + plotW, pad.t + plotH); ctx.stroke();
+  ctx.fillStyle = '#333'; ctx.textAlign = 'center'; ctx.fillText('log T (K)', pad.l + plotW/2, H - 2);
+  
+  for(let i=0; i<rows.length; i++) {
+    const r = rows[i];
+    const p = project(r);
+    const color = ['#0056b3','#0056b3','#00a0a0','#d4a000','#d06000','#c00000','#800000'][Math.min(r.type, 6)] || '#333';
+    
+    if (i > 0) {
+      const prev = project(rows[i-1]);
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    }
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (lastData.beg.length) drawHR('canvasBeg', lastData.beg);
+  if (lastData.int.length) drawHR('canvasInt', lastData.int);
+  if (lastData.adv.length) drawHR('canvasAdv', lastData.adv);
+});
+
+// ==========================================
+// 4. 运行按钮的绑定
+// ==========================================
+async function executeSim(typeKey, stdin, engine = compiled) {
+  const btn = document.getElementById('btnRun' + typeKey.charAt(0).toUpperCase() + typeKey.slice(1));
+  const status = document.getElementById('status' + typeKey.charAt(0).toUpperCase() + typeKey.slice(1));
+  
+  btn.disabled = true;
+  status.textContent = translations[currentLang].status_running;
+  status.style.color = '#666';
+  
+  try {
+    const res = await compiler.runCompiled(engine, stdin);
+    if (res.exitCode !== 0) throw new Error(res.errors.join(', ') || 'Unknown');
+    parseData(typeKey, res.stdout);
+    status.textContent = translations[currentLang].status_success;
+    status.style.color = 'green';
+  } catch(e) {
+    status.textContent = translations[currentLang].status_error + e.message;
+    status.style.color = 'red';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('btnRunBeg').onclick = () => {
+  const val = document.getElementById('presetSelect').value;
+  const [mass, z, tphysf] = val.split('_');
+  const stdin = `${mass} ${z} ${tphysf}\n0.5 0 1 190\n0 0 0 1 1.8\n0.05 0.01 0.02\n`;
+  executeSim('beg', stdin);
+};
+
+document.getElementById('btnRunInt').onclick = () => {
+  const stdin = `${document.getElementById('inMassInt').value} ${document.getElementById('inZInt').value} ${document.getElementById('inTphysfInt').value}\n0.5 0 1 190\n0 0 0 1 1.8\n0.05 0.01 0.02\n`;
+  executeSim('int', stdin);
+};
+
+document.getElementById('btnRunAdv').onclick = () => {
+  // 1. 看看用户有没有勾选 2100 选项
+  const useHurley2100 = document.getElementById('useHurley2100')?.checked || false;
+  
+  // 2. 拼接你的 stdin 参数（把你原本的拼接代码放这）
+  const stdin = `${document.getElementById('inMassAdv').value} ${document.getElementById('inZAdv').value} ${document.getElementById('inTphysfAdv').value}\n` +
+                `${document.getElementById('inNeta').value} 0 1 190\n` +
+                `0 0 0 1 1.8\n` +
+                `${document.getElementById('inPts1').value} ${document.getElementById('inPts2').value} ${document.getElementById('inPts3').value}\n`;
+  
+  // 3. 挑选引擎
+  const activeEngine = (useHurley2100 && compiledFull) ? compiledFull : compiled;
+  
+  // 4. 执行
+  executeSim('adv', stdin, activeEngine);
+};
+
+// ==========================================
+// 5. 视频导出模块
+// ==========================================
+// 接收两个参数：type 和 是否2100
+function getStageName(type, is2100 = false) {
+  if (is2100) {
+    // 2100 专属字典（补齐了底层可能直接输出的 1, 2, 3, 4, 5, 6）
+    const preciseStages = {
+      1:  "Main Sequence",              // 兜底：如果没切成11
+      2:  "Subgiant Branch",            // 兜底：如果没切成21
+      3:  "First Giant Branch",         // 👈 解决你截图里的 3
+      4:  "Core Helium Burning",        // 兜底：如果没切成41
+      5:  "Early AGB",                  // 兜底
+      6:  "Thermal Pulsing AGB",        // 兜底
+      
+      11: "Main Sequence",
+      12: "Main Sequence Hook",
+      21: "Subgiant Branch",
+      22: "Hertzsprung Gap",
+      30: "First Giant Branch",
+      41: "Core Helium Burning (Red)",
+      42: "CHeB (Secondary Red)",
+      43: "CHeB (Blue Loop)",
+      44: "Red Supergiant Branch",
+      51: "Early AGB",
+      52: "TPAGB",
+      61: "Naked Helium MS",
+      62: "Naked Helium HG",
+      63: "Naked Helium GB / WR",
+      91: "Post-AGB (Cooling WD)",
+      92: "Planetary Nebula",
+      93: "Supernova Remnant (NS/BH)",
+      101: "Helium White Dwarf",
+      102: "Carbon/Oxygen White Dwarf",
+      103: "Oxygen/Neon White Dwarf",
+      104: "Neutron Star",
+      105: "Black Hole"
+    };
+    
+    // 如果字典里有，就返回；如果没有，咱们不直接显示 2100 Stage (xx)，
+    // 而是让它继续往下走，去原版字典里找找看（防止有些过渡阶段没写）
+    if (preciseStages[type] !== undefined) {
+      return preciseStages[type];
+    }
+  }
+
+  // 原版 Hurley 2000 字典（作为兜底）
+  const originalStages = {
+    0: "Deep/Full Conv. Low MS",
+    1: "Main Sequence",
+    2: "Hertzsprung Gap",
+    3: "First Giant Branch",
+    4: "Core Helium Burning",
+    5: "Early AGB",
+    6: "Thermal Pulsing AGB",
+    7: "Naked Helium MS",
+    8: "Naked Helium HG",
+    9: "Naked Helium GB",
+    10: "Helium White Dwarf",
+    11: "Carbon/Oxygen WD",
+    12: "Oxygen/Neon WD",
+    13: "Neutron Star",
+    14: "Black Hole",
+    15: "Massless Supernova"
+  };
+  
+  if (originalStages[type] !== undefined) {
+    return originalStages[type];
+  }
+
+  // 实在都没有，才显示 Unknown
+  return "Unknown (" + type + ")";
+}
+
+function tempToColor(T) {
+  let temp = T / 100;
+  let r, g, b;
+  if (temp <= 66) r = 255;
+  else {
+    r = temp - 60;
+    r = 329.698727446 * Math.pow(r, -0.1332047592);
+    r = Math.max(0, Math.min(255, r));
+  }
+  if (temp <= 66) {
+    g = temp;
+    g = 99.4708025861 * Math.log(g) - 161.1195681661;
+    g = Math.max(0, Math.min(255, g));
+  } else {
+    g = temp - 60;
+    g = 288.1221695283 * Math.pow(g, -0.0755148492);
+    g = Math.max(0, Math.min(255, g));
+  }
+  if (temp >= 66) b = 255;
+  else if (temp <= 19) b = 0;
+  else {
+    b = temp - 10;
+    b = 138.5177312231 * Math.log(b) - 305.0447927307;
+    b = Math.max(0, Math.min(255, b));
+  }
+  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+}
+
+window.drawVideoFrameToCanvas = function(canvas, rows, currentIndex, zams = "1.0", zmetal = "0.02", engineName = "Hurley 2000") {
+  window.currentEngineName = engineName;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const row = rows[currentIndex];
+  if (!row) return;
+
+  const scale = W / 1280; 
+  ctx.fillStyle = '#000000'; 
+  ctx.fillRect(0, 0, W, H);
+
+  const leftW = Math.floor(W * (1/3)); 
+  const rightW = W - leftW;
+  const padding = 15 * scale;
+  let curY = padding;
+
+  const availableW = leftW - padding * 2; 
+  
+  // 计算可用总高度，防止溢出
+  const totalAvailableH = H - padding * 2;
+  // HR 图高度占比 40%
+  const hrH = totalAvailableH * 0.40;
+  
+  // 1. HR 图
+  drawChartHR(ctx, rows.slice(0, currentIndex + 1), padding, curY, availableW, hrH, scale);
+  curY += hrH + (8 * scale); 
+  
+  const maxTev = rows[currentIndex].Tev;
+  const gap = 8 * scale;
+  
+  // 2x2 网格尺寸计算
+  const colW = (availableW - gap) / 2;
+  // 2x2 网格高度占剩余的 30%，避免文字面板被挤压
+  const chartH = totalAvailableH * 0.30 / 2; 
+
+  // 第一排
+  drawChartLinear(ctx, rows, currentIndex, 'Tev', [{key:'totalMass', color:'#ff5555'}, {key:'coreMass', color:'#55ff55'}], padding, curY, colW, chartH, "Mass", maxTev, scale);
+  drawChartLinear(ctx, rows, currentIndex, 'Tev', [{key:'L', color:'#55aaff'}], padding + colW + gap, curY, colW, chartH, "Lum", maxTev, scale);
+  curY += chartH + gap;
+
+  // 第二排
+  drawChartLinear(ctx, rows, currentIndex, 'Tev', [{key:'T', color:'#ffaa00'}], padding, curY, colW, chartH, "Temp", maxTev, scale);
+  drawChartLinear(ctx, rows, currentIndex, 'Tev', [{key:'R', color:'#ff44aa'}], padding + colW + gap, curY, colW, chartH, "Radius", maxTev, scale);
+  curY += chartH + (8 * scale);
+
+  // 3. 纯文本信息栏 (占据最底部剩余空间)
+  const infoH = H - curY - padding;
+  if (infoH > (30 * scale)) {
+    drawInfoPanelText(ctx, row, padding, curY, availableW, infoH, scale);
+  }
+
+  // 4. 绘制恒星与底部文字
+  const cx = leftW + rightW / 2;
+  const cy = H / 2 - 20 * scale; 
+  const maxRadius = Math.min(rightW, H) * 0.35; 
+  
+  // 调用纯净的恒星函数
+  drawStar(ctx, row, cx, cy, maxRadius); 
+
+  // 右下角文本
+  ctx.fillStyle = '#888';
+  ctx.font = `${14 * scale}px monospace`;
+  ctx.textAlign = 'right';
+  const textY = H - padding - 40 * scale;
+  ctx.fillText(`ZAMS = ${zams} M☉`, leftW + rightW - padding, textY);
+  ctx.fillText(`Zmetal = ${zmetal}`, leftW + rightW - padding, textY + 20 * scale);
+  ctx.fillText(`Engine: ${engineName}`, leftW + rightW - padding, textY + 40 * scale);
+};
+
+function drawChartLinear(ctx, rows, currentIndex, xKey, ySeries, x, y, w, h, title, maxTev, scale = 1) {
+  if (!rows || rows.length === 0) return;
+  ctx.fillStyle = '#000000'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h);
+  
+  ctx.fillStyle = '#888'; ctx.font = `${10 * scale}px sans-serif`; ctx.textAlign = 'left';
+  ctx.fillText(title, x + 6 * scale, y + 14 * scale);
+
+  const pad = {l: 35 * scale, r: 10 * scale, t: 20 * scale, b: 15 * scale};
+  const plotW = w - pad.l - pad.r; 
+  const plotH = h - pad.t - pad.b; 
+
+  let yMin = Infinity, yMax = -Infinity;
+  for (let i = 0; i <= currentIndex; i++) {
+    const r = rows[i];
+    for (let s of ySeries) {
+      const val = r[s.key];
+      if (Number.isFinite(val)) {
+        if (val < yMin) yMin = val; if (val > yMax) yMax = val;
+      }
+    }
+  }
+  if (!Number.isFinite(yMin)) yMin = 0;
+  
+  // 防止极值差太小导致坐标轴刻度相同
+  if (yMax - yMin < 1e-5) { 
+    yMax += (Math.abs(yMax) * 0.01) + 1e-5; 
+    yMin -= (Math.abs(yMin) * 0.01) + 1e-5; 
+  } else { 
+    const yp = (yMax - yMin) * 0.1; 
+    yMin -= yp; yMax += yp; 
+  }
+
+  const xLimit = maxTev || 1;
+  const tx = (val) => pad.l + (val / xLimit) * plotW;
+  const ty = (val) => pad.t + ((yMax - val) / (yMax - yMin)) * plotH;
+
+  ctx.save(); ctx.translate(x, y);
+  
+  ctx.strokeStyle = '#222'; ctx.fillStyle = '#666'; ctx.font = `${9 * scale}px monospace`;
+  for(let i=0; i<=2; i++) {
+    const val = yMin + (yMax - yMin) * (i/2); const py = ty(val);
+    ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(pad.l + plotW, py); ctx.stroke();
+    ctx.textAlign = 'right'; 
+    
+    // 修复刻度显示：极大或极小时使用科学计数法，且保证精度
+    let label;
+    if (Math.abs(val) >= 1e4 || (Math.abs(val) > 0 && Math.abs(val) < 0.01)) {
+      label = val.toExponential(1);
+    } else {
+      // 根据量级动态调整小数位
+      const digits = (yMax - yMin) < 0.1 ? 3 : 1;
+      label = val.toFixed(digits);
+    }
+    ctx.fillText(label, pad.l - 4 * scale, py + 3 * scale);
+  }
+
+  for (let s of ySeries) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 1.5 * scale;
+    ctx.beginPath();
+    for (let i = 0; i <= currentIndex; i++) {
+      const val = rows[i][s.key];
+      if (!Number.isFinite(val)) continue;
+      const px = tx(rows[i][xKey]), py = ty(val);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawInfoPanelText(ctx, row, x, y, w, h, scale = 1) {
+  ctx.fillStyle = '#000000'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h);
+  
+  const fs = Math.max(11, Math.min(15 * scale, h / 7));
+  ctx.font = `${fs}px monospace`; ctx.textAlign = 'left';
+  
+  const padX = 15 * scale;
+  const lineSpacing = h / 6.5; 
+  let curY = y + lineSpacing;
+
+  const Lstr = row.L >= 1e3 ? row.L.toExponential(3) : row.L.toFixed(3);
+  const Rstr = row.R >= 1e3 ? row.R.toExponential(3) : row.R.toFixed(3);
+
+  // 获取阶段名称 (注意传入 is2100 参数)
+  const is2100 = (typeof currentEngineName !== 'undefined' && currentEngineName === "Hurley 2100");
+  const stageName = typeof getStageName === 'function' ? getStageName(row.type, is2100) : "Unknown";
+
+  const lines = [
+    `Type: ${row.type} | ${stageName}`, // 🔥 修改点：同时显示 type 和 stage
+    `Tev: ${row.Tev.toFixed(3)} Myr`,
+    `Mt: ${row.totalMass.toFixed(3)} M☉  |  Mc: ${row.coreMass.toFixed(3)} M☉`,
+    `Lum: ${Lstr} L☉`,
+    `Rad: ${Rstr} R☉  |  Temp: ${row.T.toFixed(0)} K`
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillStyle = i === 0 ? '#55aaff' : '#fff'; // 第一行蓝色高亮
+    ctx.fillText(lines[i], x + padX, curY);
+    curY += lineSpacing;
+  }
+}
+
+function drawChartHR(ctx, data, x, y, w, h, scale = 1) {
+  if (!data || data.length === 0) return;
+  ctx.fillStyle = '#000000'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h);
+  
+  const pad = {l: 35 * scale, r: 10 * scale, t: 20 * scale, b: 15 * scale};
+  const plotW = w - pad.l - pad.r; 
+  const plotH = h - pad.t - pad.b; 
+  const xmin = 3.3, xmax = 4.7, ymin = -3, ymax = 6;
+  const tx = (val) => pad.l + ((xmax - val) / (xmax - xmin)) * plotW;
+  const ty = (val) => pad.t + ((ymax - val) / (ymax - ymin)) * plotH;
+
+  ctx.save(); ctx.translate(x, y);
+  
+  ctx.fillStyle = '#888'; ctx.font = `${11 * scale}px sans-serif`; ctx.textAlign = 'left';
+  ctx.fillText("HR Diagram", 8 * scale, 16 * scale);
+
+  ctx.strokeStyle = '#222'; ctx.fillStyle = '#888'; ctx.font = `${10 * scale}px sans-serif`;
+  for(let lt = 4.5; lt >= 3.3; lt -= 0.4) {
+    const px = tx(lt); ctx.beginPath(); ctx.moveTo(px, pad.t); ctx.lineTo(px, pad.t + plotH); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillText(lt.toFixed(1), px, pad.t + plotH + 14 * scale);
+  }
+  for(let ll = -2; ll <= 6; ll += 2) {
+    const py = ty(ll); ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(pad.l + plotW, py); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText(ll, pad.l - 5 * scale, py + 3 * scale);
+  }
+
+  ctx.beginPath(); ctx.rect(pad.l, pad.t, plotW, plotH); ctx.clip();
+  for (let i = 1; i < data.length; i++) {
+    const p1 = data[i-1], p2 = data[i];
+    const color = ['#55aaff','#55aaff','#00e5ff','#ffcc00','#ff6600','#ff0000','#aa0000'][Math.min(p2.type, 6)] || '#fff';
+    ctx.strokeStyle = color; ctx.lineWidth = 2 * scale;
+    ctx.beginPath(); ctx.moveTo(tx(p1.logT), ty(p1.logL)); ctx.lineTo(tx(p2.logT), ty(p2.logL)); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawStar(ctx, row, cx, cy, maxRadius) {
+  let visualRadius;
+  if (row.logR <= 0) {
+    visualRadius = maxRadius * (0.05 + 0.15 * Math.pow(10, row.logR));
+  } else {
+    visualRadius = maxRadius * (0.2 + 0.8 * Math.pow(row.logR / 3, 0.5));
+  }
+  visualRadius = Math.max(2, Math.min(maxRadius, visualRadius));
+  
+  const color = tempToColor(row.T);
+  
+  // 外发光
+  const glowRadius = visualRadius * 2.5;
+  const glowGrad = ctx.createRadialGradient(cx, cy, visualRadius * 1.0, cx, cy, glowRadius);
+  glowGrad.addColorStop(0, color.replace('rgb', 'rgba').replace(')', ', 0.8)'));
+  glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glowGrad;
+  ctx.beginPath(); 
+  ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2); 
+  ctx.fill();
+
+  // 本体
+  ctx.fillStyle = color;
+  ctx.beginPath(); 
+  ctx.arc(cx, cy, visualRadius, 0, Math.PI * 2); 
+  ctx.fill();
+  
+  // 特殊残骸
+  if (row.type === 13) {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(cx, cy, visualRadius, 0, Math.PI * 2); ctx.fill();
+  } else if (row.type === 14) {
+    ctx.fillStyle = '#000000';
+    ctx.beginPath(); ctx.arc(cx, cy, visualRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+window.exportVideo = async function(typeKey) {
+  const rows = lastData[typeKey];
+  if (!rows || rows.length === 0) return;
+
+  const capType = typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
+  const exportMode = document.querySelector(`input[name="exportMode${capType}"]:checked`).value;
+  const isRealtime = exportMode === 'realtime';
+  const skipMS = isRealtime ? document.getElementById(`skipMS${capType}`).checked : false;
+  const duration = isRealtime ? parseFloat(document.getElementById(`duration${capType}`).value) : 15;
+  const totalFrames = isRealtime ? Math.floor(duration * 30) : parseInt(document.getElementById(`frames${capType}`).value);
+  
+  const resStr = document.getElementById(`res${capType}`).value;
+  const [videoW, videoH] = resStr.split('x').map(Number);
+  const bitrate = parseInt(document.getElementById(`bitrate${capType}`).value);
+
+  const statusEl = document.getElementById('statusExport' + capType);
+  const btn = document.getElementById('btnExport' + capType);
+
+  let activeRows = rows;
+  
+  // 🔥 修复 1：跳过主序与保留 3~5 秒主序
+  if (skipMS) {
+    const firstNonMS = rows.findIndex(r => r.type > 1);
+    if (firstNonMS > 0) {
+      // 强行保留 15% 的帧数用来播放主序末尾
+      // 比如总共有 500 帧，就留 75 帧（约 2.5 秒）给主序
+      const framesForMS = Math.floor(totalFrames * 0.15);
+      // 倒推需要的数据行数（大约需要取 firstNonMS 之前的多少行）
+      const msRowsCount = Math.floor(activeRows.length * 0.15); 
+      const startIndex = Math.max(0, firstNonMS - msRowsCount);
+      activeRows = rows.slice(startIndex);
+    }
+  }
+
+  btn.disabled = true;
+  // 🔥 修复 2：进度条初始化，直接硬编码保证能跑
+  statusEl.textContent = "编码中... 0%";
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = videoW;
+  offscreen.height = videoH;
+
+  const muxer = new Mp4Muxer.Muxer({
+    target: new Mp4Muxer.ArrayBufferTarget(),
+    video: { codec: 'avc', width: videoW, height: videoH },
+    fastStart: 'in-memory',
+  });
+
+  const videoEncoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: e => console.error(e),
+  });
+  
+  videoEncoder.configure({
+    codec: 'avc1.42001f',
+    width: videoW,
+    height: videoH,
+    bitrate: bitrate,
+    framerate: 30,
+    latencyMode: "realtime",
+  });
+
+  function lerp(start, end, t) {
+    return start + (end - start) * t;
+  }
+
+  function getInterpolatedRow(rows, indexFloat) {
+    const i1 = Math.floor(indexFloat);
+    const i2 = Math.min(i1 + 1, rows.length - 1);
+    const t = indexFloat - i1;
+    
+    const r1 = rows[i1];
+    const r2 = rows[i2];
+    
+    if (i1 === i2) return r1; 
+
+    return {
+      Tev: lerp(r1.Tev, r2.Tev, t),
+      type: r1.type,
+      coreMass: lerp(r1.coreMass, r2.coreMass, t),
+      totalMass: lerp(r1.totalMass, r2.totalMass, t),
+      L: lerp(r1.L, r2.L, t),
+      R: lerp(r1.R, r2.R, t),
+      logL: lerp(r1.logL, r2.logL, t),
+      logR: lerp(r1.logR, r2.logR, t),
+      logT: lerp(r1.logT, r2.logT, t),
+      T: lerp(r1.T, r2.T, t),
+    };
+  }
+
+  const smoothRows = [];
+  for (let i = 0; i < totalFrames; i++) {
+    const progress = i / (totalFrames - 1);
+    const dataIndexFloat = progress * (activeRows.length - 1);
+    smoothRows.push(getInterpolatedRow(activeRows, dataIndexFloat));
+  }
+
+  for (let i = 0; i < totalFrames; i++) {
+    // 绘制当前帧
+    // 动态抓取输入框参数
+    const capKey = typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
+    const massVal = document.getElementById(`inMass${capKey}`)?.value || 
+                    (document.getElementById('presetSelect')?.value.split('_')[0]) || "1.0";
+    const zVal = document.getElementById(`inZ${capKey}`)?.value || 
+                 (document.getElementById('presetSelect')?.value.split('_')[1]) || "0.02";
+    const is2100 = (typeKey === 'adv') && document.getElementById('useHurley2100')?.checked;
+    const engineStr = is2100 ? "Hurley 2100" : "Hurley 2000";
+
+    window.drawVideoFrameToCanvas(offscreen, smoothRows, i, massVal, zVal, engineStr);
+    
+    const frame = new VideoFrame(offscreen, { timestamp: i * (1e6 / 30) });
+    videoEncoder.encode(frame, { keyFrame: i % 30 === 0 });
+    frame.close();
+    
+    if (videoEncoder.encodeQueueSize > 80) {
+      await new Promise(r => setTimeout(r, 2));
+    }
+    
+    // 🔥 修复 3：每 5 帧更新一次进度，文字直接用中英文判断，不做复杂的字典替换
+    if (i % 5 === 0 || i === totalFrames - 1) {
+      const pct = ((i / (totalFrames - 1)) * 100).toFixed(0);
+      if (currentLang === 'zh') {
+        statusEl.textContent = `编码中... ${pct}%`;
+      } else {
+        statusEl.textContent = `Encoding... ${pct}%`;
+      }
+      // 强制让浏览器刷新 UI 渲染队列（防止因为计算太快导致界面卡死）
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  await videoEncoder.flush();
+  videoEncoder.close();
+  muxer.finalize();
+
+  const { buffer } = muxer.target;
+  const blob = new Blob([buffer], { type: 'video/mp4' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `RASL_Export_${Date.now()}.mp4`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  statusEl.textContent = currentLang === 'zh' ? "视频已下载！" : "Video downloaded!";
+  btn.disabled = false;
+};
+
+// 绑定导出按钮
+document.addEventListener('DOMContentLoaded', () => {
+  const btnBeg = document.getElementById('btnExportBeg');
+  const btnInt = document.getElementById('btnExportInt');
+  const btnAdv = document.getElementById('btnExportAdv');
+  if (btnBeg) btnBeg.onclick = () => window.exportVideo('beg');
+  if (btnInt) btnInt.onclick = () => window.exportVideo('int');
+  if (btnAdv) btnAdv.onclick = () => window.exportVideo('adv');
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  window.applyLang();
+  window.switchPage(window.location.hash.replace('#', '') || 'home');
+  initWasm();
+});
+</script>
+</body>
+</html>
